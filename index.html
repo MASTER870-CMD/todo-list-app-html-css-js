@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Beautiful To-Do List</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      font-family: "Poppins", sans-serif;
+      background: linear-gradient(135deg, #6a11cb, #2575fc);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      margin: 0;
+      padding: 10px;
+      transition: background 0.5s, color 0.5s;
+    }
+    body.dark {
+      background: linear-gradient(135deg, #111, #333);
+      color: #f1f1f1;
+    }
+    .todo-container {
+      background: #fff;
+      padding: 20px;
+      border-radius: 15px;
+      width: 100%;
+      max-width: 400px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+      animation: fadeIn 0.8s ease-in-out;
+      transition: background 0.5s, color 0.5s;
+    }
+    body.dark .todo-container {
+      background: #222;
+      color: #f1f1f1;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: scale(0.9); }
+      to { opacity: 1; transform: scale(1); }
+    }
+    h2 {
+      text-align: center;
+      margin-bottom: 15px;
+    }
+    .top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    .dark-toggle {
+      cursor: pointer;
+      font-size: 20px;
+      border: none;
+      background: none;
+      color: inherit;
+      transition: transform 0.3s;
+    }
+    .dark-toggle:hover {
+      transform: scale(1.2);
+    }
+    .input-group {
+      display: flex;
+      gap: 10px;
+    }
+    input {
+      flex: 1;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 10px;
+      outline: none;
+      transition: 0.3s;
+    }
+    body.dark input {
+      background: #333;
+      color: #f1f1f1;
+      border: 1px solid #555;
+    }
+    input:focus {
+      border-color: #2575fc;
+      box-shadow: 0 0 5px #2575fc;
+    }
+    button {
+      padding: 10px 15px;
+      background: #2575fc;
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+    button:hover {
+      background: #6a11cb;
+    }
+    ul {
+      list-style: none;
+      padding: 0;
+      margin-top: 20px;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    li {
+      padding: 10px;
+      margin-bottom: 10px;
+      background: #f9f9f9;
+      border-radius: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: 0.3s;
+      cursor: pointer;
+    }
+    body.dark li {
+      background: #333;
+    }
+    li.completed {
+      text-decoration: line-through;
+      color: gray;
+      background: #e0e0e0;
+    }
+    body.dark li.completed {
+      background: #444;
+      color: #888;
+    }
+    .actions {
+      display: flex;
+      gap: 5px;
+    }
+    .delete, .edit {
+      border: none;
+      padding: 5px 8px;
+      border-radius: 5px;
+      cursor: pointer;
+      color: #fff;
+    }
+    .delete {
+      background: crimson;
+    }
+    .edit {
+      background: orange;
+    }
+    .delete:hover { background: darkred; }
+    .edit:hover { background: darkorange; }
+    .footer {
+      margin-top: 15px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 14px;
+    }
+    .filters button {
+      background: #eee;
+      color: #333;
+      border-radius: 8px;
+      padding: 5px 10px;
+    }
+    .filters button.active {
+      background: #2575fc;
+      color: #fff;
+    }
+    body.dark .filters button {
+      background: #444;
+      color: #f1f1f1;
+    }
+    .clear {
+      margin-top: 10px;
+      width: 100%;
+      background: crimson;
+    }
+    .clear:hover {
+      background: darkred;
+    }
+  </style>
+</head>
+<body>
+  <div class="todo-container">
+    <div class="top-bar">
+      <h2>✨ To-Do List ✨</h2>
+      <button class="dark-toggle" onclick="toggleDarkMode()">🌙</button>
+    </div>
+    <div class="input-group">
+      <input type="text" id="taskInput" placeholder="Add a new task...">
+      <button onclick="addTask()">Add</button>
+    </div>
+    <ul id="taskList"></ul>
+    <div class="footer">
+      <span id="taskCount">0 tasks</span>
+      <div class="filters">
+        <button onclick="setFilter('all')" class="active">All</button>
+        <button onclick="setFilter('active')">Active</button>
+        <button onclick="setFilter('completed')">Completed</button>
+      </div>
+    </div>
+    <button class="clear" onclick="clearAll()">Clear All</button>
+  </div>
+
+  <script>
+    let tasks = JSON.parse(localStorage.getItem("tasks")) || [];
+    let filter = "all";
+    const taskInput = document.getElementById("taskInput");
+    const taskList = document.getElementById("taskList");
+    const taskCount = document.getElementById("taskCount");
+    const darkToggle = document.querySelector(".dark-toggle");
+
+    // Restore dark mode setting
+    if(localStorage.getItem("darkMode") === "true") {
+      document.body.classList.add("dark");
+      darkToggle.textContent = "☀️";
+    }
+
+    function saveTasks() {
+      localStorage.setItem("tasks", JSON.stringify(tasks));
+    }
+
+    function renderTasks() {
+      taskList.innerHTML = "";
+      let filtered = tasks.filter(t => {
+        if (filter === "active") return !t.completed;
+        if (filter === "completed") return t.completed;
+        return true;
+      });
+
+      filtered.forEach((task, index) => {
+        const li = document.createElement("li");
+        li.textContent = task.text;
+        if (task.completed) li.classList.add("completed");
+
+        li.addEventListener("click", () => toggleTask(index));
+
+        const actions = document.createElement("div");
+        actions.classList.add("actions");
+
+        const editBtn = document.createElement("button");
+        editBtn.textContent = "✏";
+        editBtn.classList.add("edit");
+        editBtn.onclick = (e) => {
+          e.stopPropagation();
+          editTask(index);
+        };
+
+        const delBtn = document.createElement("button");
+        delBtn.textContent = "✖";
+        delBtn.classList.add("delete");
+        delBtn.onclick = (e) => {
+          e.stopPropagation();
+          deleteTask(index);
+        };
+
+        actions.appendChild(editBtn);
+        actions.appendChild(delBtn);
+        li.appendChild(actions);
+        taskList.appendChild(li);
+      });
+
+      let total = tasks.length;
+      let completed = tasks.filter(t => t.completed).length;
+      taskCount.textContent = `${completed}/${total} completed`;
+    }
+
+    function addTask() {
+      if (taskInput.value.trim() === "") return alert("Please enter a task!");
+      tasks.push({ text: taskInput.value, completed: false });
+      taskInput.value = "";
+      saveTasks();
+      renderTasks();
+    }
+
+    function toggleTask(index) {
+      tasks[index].completed = !tasks[index].completed;
+      saveTasks();
+      renderTasks();
+    }
+
+    function deleteTask(index) {
+      tasks.splice(index, 1);
+      saveTasks();
+      renderTasks();
+    }
+
+    function editTask(index) {
+      let newText = prompt("Edit task:", tasks[index].text);
+      if (newText) {
+        tasks[index].text = newText;
+        saveTasks();
+        renderTasks();
+      }
+    }
+
+    function clearAll() {
+      if (confirm("Are you sure you want to clear all tasks?")) {
+        tasks = [];
+        saveTasks();
+        renderTasks();
+      }
+    }
+
+    function setFilter(f) {
+      filter = f;
+      document.querySelectorAll(".filters button").forEach(btn => btn.classList.remove("active"));
+      event.target.classList.add("active");
+      renderTasks();
+    }
+
+    function toggleDarkMode() {
+      document.body.classList.toggle("dark");
+      let isDark = document.body.classList.contains("dark");
+      darkToggle.textContent = isDark ? "☀️" : "🌙";
+      localStorage.setItem("darkMode", isDark);
+    }
+
+    renderTasks();
+  </script>
+</body>
+</html>
